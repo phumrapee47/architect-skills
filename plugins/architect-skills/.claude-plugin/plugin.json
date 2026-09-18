@@ -1,0 +1,8 @@
+{
+  "name": "architect-skills",
+  "description": "8 skill สำหรับออกแบบระบบระดับ production ครบ lifecycle: system design, database, API, security, testing, resilience, observability, deployment",
+  "version": "1.0.0",
+  "author": {
+    "name": "phumrapee47"
+  }
+}

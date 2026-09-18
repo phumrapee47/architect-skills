@@ -1,0 +1,14 @@
+{
+  "name": "architect-skills",
+  "owner": {
+    "name": "phumrapee47"
+  },
+  "plugins": [
+    {
+      "name": "architect-skills",
+      "source": "./plugins/architect-skills",
+      "description": "8 skill สำหรับออกแบบระบบระดับ production ครบ lifecycle: system design, database, API, security, testing, resilience, observability, deployment",
+      "version": "1.0.0"
+    }
+  ]
+}
