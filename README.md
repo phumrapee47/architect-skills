@@ -16,6 +16,7 @@ normalization audit ของฝั่ง DB) ไม่ใช่แค่ checkl
 | `resilience-architect` | ทนต่อความล้มเหลวของ dependency ภายนอก | Timeout/Retry/Circuit Breaker/Fallback/Bulkhead |
 | `observability-architect` | logging/metrics/tracing/alerting | Structured Logging/RED-USE Metrics/Tracing/SLO Alerting |
 | `deployment-architect` | CI/CD, release strategy | Pipeline Gate/Env Parity/Release Strategy/Rollback/Secret Mgmt/Deploy Observability |
+| `requirements-traceability` | ตรวจ requirement → design → code → test ว่าสอดคล้องกัน | Forward/Backward Trace, Cross-Doc Consistency, Gap Severity |
 
 `system-design-architect` ควรใช้ก่อนตัวอื่นเสมอ เพราะเป็นการตัดสินใจที่แก้ทีหลังแพงที่สุด ส่วนอีก 7
 ตัวอ้างอิงกันข้ามชั้นได้ (เช่น `resilience-architect` ใช้ Idempotency-Key pattern จาก
@@ -56,6 +57,7 @@ architect-skills/
 │           ├── test-architect/SKILL.md
 │           ├── resilience-architect/SKILL.md
 │           ├── observability-architect/SKILL.md
-│           └── deployment-architect/SKILL.md
+│           ├── deployment-architect/SKILL.md
+│           └── requirements-traceability/SKILL.md
 └── README.md
 ```
