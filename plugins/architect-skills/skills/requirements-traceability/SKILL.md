@@ -1,5 +1,5 @@
 ---
-description: ตรวจสอบ requirements traceability ตลอดสาย requirement → acceptance criteria → design (API/DB/architecture) → โค้ด → test โดยจับ requirement ที่ไม่มีใครรับผิดชอบ, design/โค้ดที่ไม่มีที่มา (gold plating), เอกสารที่ขัดแย้งกันเอง และ AC ที่ไม่มี test รองรับ พร้อม traceability matrix และ gap report
+description: ตรวจสอบ requirements traceability ตลอดสาย requirement → acceptance criteria → design (API/DB/architecture) → โค้ด → test โดยจับ requirement ที่ไม่มีใครรับผิดชอบ, design/โค้ดที่ไม่มีที่มา (gold plating), เอกสารที่ขัดแย้งกันเอง (เช่น OpenAPI ไม่ตรง schema) และ AC ที่ไม่มี test รองรับ พร้อม traceability matrix และ gap report เรียงตาม severity ใช้เสมอเมื่อผู้ใช้พิมพ์ทำนอง "requirement ครบหรือยัง", "feature นี้ทำครบตาม AC ไหม", "เทียบ spec กับโค้ด/test", "ก่อนปล่อย/ก่อน QA เช็คให้หน่อยว่าอะไรหลุด", "traceability matrix", "coverage ของ requirement", "doc กับโค้ดตรงกันไหม" แม้ไม่ได้พูดคำว่า traceability
 argument-hint: <path ของ requirements/spec/design/โค้ด/test หรือ feature ที่ต้องการตรวจ>
 ---
 
@@ -22,6 +22,13 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 - ถ้าไม่มี requirement เป็นลายลักษณ์อักษร ให้ถามผู้ใช้ข้อเดียวที่สำคัญที่สุด ว่าจะใช้อะไรเป็น source of truth
   (README, ticket, หรือให้ถอด requirement จากพฤติกรรมโค้ดแล้วให้ผู้ใช้ยืนยัน) แล้วรอคำตอบ
   ห้ามเดา requirement เองแล้วตรวจเทียบกับสิ่งที่เดาเอง เพราะจะได้ผลตรวจที่ดูถูกแต่ไร้ความหมาย
+- ถ้ามี requirement หลายเวอร์ชัน (draft vs เวอร์ชันที่ผ่าน BA/PM) ให้ทำ **ตาราง document precedence** ก่อนตรวจ:
+  เอกสารที่ประกาศตัวเองว่าเป็นฉบับที่ชนะและใหม่กว่าถือเป็น source of truth ส่วนฉบับเก่าที่ยังค้างอยู่เป็น finding
+  ("superseded แต่ไม่ได้ติดป้าย") และบันทึกการเลือกนี้ไว้ใน Decisions Needed
+  กรณีรันแบบ unattended/subagent ที่ถามผู้ใช้ไม่ได้ ให้เลือกตามกติกานี้เองแล้วระบุให้ชัด แทนการหยุดรอ
+- ชั้น design ไม่ได้มีแค่ไฟล์ที่ชื่อ design เสมอไป: ให้ค้นหา design ที่ใหม่ที่สุดจริง และถือว่า migration/DDL ที่ apply แล้ว
+  คือความจริงของฝั่ง DB ถ้า design doc ที่ตั้งชื่อชัดเจน (design-api/design-db/openapi) ล้าหลังโค้ด ให้บันทึกเป็น finding
+  `STALE_DOC` ไม่ใช่ข้ามไป
 
 ### Step 2 — Normalize Requirements เป็นหน่วยตรวจได้
 - แตกเป็น ID คงที่: `REQ-01`, `REQ-02`... และ AC ย่อย `REQ-01.AC1`
@@ -38,10 +45,19 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 
 สถานะต่อ link: `COVERED` | `PARTIAL` | `MISSING` | `UNVERIFIABLE`
 - `PARTIAL`: มี happy path แต่ไม่มี error/boundary ที่ AC ระบุ
-- ห้ามนับว่า `COVERED` ถ้าหลักฐานเป็นแค่ชื่อไฟล์/ชื่อฟังก์ชัน ต้องเห็นพฤติกรรมจริง
+- ระบุ **ระดับหลักฐาน** ของทุก `COVERED` เพราะการเปิดอ่าน assertion ทุก test ไม่คุ้มเมื่อมี AC หลักสิบ-ร้อยข้อ:
+  - `L1` ชื่อ test/ฟังก์ชันตรง AC เท่านั้น → นับเป็น `COVERED (provisional)`
+  - `L2` เปิดอ่าน assertion แล้วเห็นพฤติกรรมตรง AC → `COVERED`
+  - `L3` รัน test แล้วผ่านจริง → `COVERED (verified)`
+  ห้ามนับ L0 (แค่ชื่อไฟล์ที่ฟังดูเกี่ยวข้อง) เป็น COVERED ข้อที่เสี่ยงสูง (P0/เงิน/auth) ต้องไปถึง L2 ขึ้นไป
+- รัน test ได้เฉพาะคำสั่ง read-only ที่ไม่มี side effect (ไม่แตะ DB จริง/ไม่ deploy) ถ้ารันไม่ได้ให้ระบุว่าผลทั้งหมดไม่เกิน L2
+- หน่วยนับคือ AC หนึ่งข้อ (แยกข้อที่มีหลายส่วนเป็นข้อย่อย) และ `UNVERIFIABLE` นับอยู่ในตัวหาร
 
 ### Step 4 — Trace Backward (ของที่ไม่มีที่มา)
 เริ่มจาก endpoint, column, feature flag, module, test แล้วถามว่า "ตอบ requirement ข้อไหน"
+วิธีทำใน repo ใหญ่ (ไม่ต้องอ่านทั้ง repo): list ของใหม่ในขอบเขตที่ตรวจ ได้แก่ migration/RPC/column/config key/route/test file
+แล้ว grep หา REQ/AC/US id หรือคำสำคัญของแต่ละตัว ตัวที่ไม่มีผู้อ้างถึงคือผู้ต้องสงสัย `ORPHAN`
+ค่า config และ threshold ที่ไม่มีที่มาใน requirement (เช่น ระยะ 40 m, หน้าต่าง 60 s) ก็นับเป็น ORPHAN
 - ไม่มีที่มา → `ORPHAN` (gold plating, scope creep, หรือ requirement ที่ไม่ได้บันทึก)
   ต้องให้ผู้ใช้ตัดสินว่าควร (a) เพิ่ม requirement ย้อนหลัง หรือ (b) ลบทิ้ง
 - Test ที่ไม่ผูกกับ AC ใดเลย → `ORPHAN_TEST` (อาจเป็น regression ที่ดี แต่ต้องระบุเหตุผล)
@@ -63,6 +79,8 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 ### Step 6 — Risk-Rank & Gap Triage
 - ให้ severity ตามผลกระทบ ไม่ใช่ตามจำนวน: `CRITICAL` (เงิน/auth/data loss/ข้อกำหนดทางกฎหมาย ไม่มี test หรือไม่ถูก implement)
   > `HIGH` (functional หลักขาด) > `MEDIUM` (edge case/NFR) > `LOW` (เอกสารไม่ตรงแต่พฤติกรรมถูก)
+- story ที่เป็น P0 แต่ทำงานตามจุดประสงค์ไม่ได้เลย (เช่น มี client แต่ไม่มีตัวส่ง) ให้ไม่ต่ำกว่า `HIGH`
+  แม้ไม่เข้าเกณฑ์ CRITICAL และ priority ของ requirement (P0/P1/P2) ให้ใช้ปรับ severity ขึ้น/ลงหนึ่งขั้นได้
 - เรียงผลโดย CRITICAL ก่อนเสมอ เพราะผู้อ่านมักหยุดอ่านกลางทาง
 
 ### Step 7 — Output สรุป
@@ -74,7 +92,8 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 3. **Gap Report** (เรียงตาม severity)
    | # | Severity | ประเภท (MISSING/ORPHAN/CONFLICT/AMBIGUOUS) | หลักฐาน (`path:L##`) | วิธีแก้ที่แนะนำ |
 4. **Conflict List** — ผลจาก Step 5 พร้อมคำแนะนำว่าฝั่งไหนควรแก้
-5. **Mermaid Diagram** — `flowchart LR` แสดงสาย REQ → Design → Code → Test โดยแยกสี/เส้นประสำหรับ link ที่ MISSING
+5. **Mermaid Diagram** — `flowchart LR` ระดับ story (ไม่ใช่ระดับ AC เพราะอ่านไม่ออก) แสดงสาย REQ → Design → Code → Test
+   ใช้ 3 สี: เขียว=COVERED, เหลือง=PARTIAL, แดง/เส้นประ=MISSING
 6. **Decisions Needed** — ตาราง: คำถาม | ตัวเลือก | ผลที่ตามมา (เฉพาะที่ต้องให้มนุษย์ตัดสิน)
 7. **Maintenance Hint** — วิธีรักษา trace ไม่ให้เน่า เช่น แท็ก `// REQ-01.AC2` ใน test, ตรวจใน CI,
    หรือ checklist ใน PR template
@@ -89,6 +108,10 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 - [ ] ไม่ได้แก้ requirement หรือ AC เองโดยไม่ผ่านผู้ใช้
 - [ ] NFR และ security requirement ถูกตรวจ ไม่ใช่แค่ functional
 - [ ] Gap เรียง CRITICAL ก่อน และ Executive Summary ตอบได้ว่า "ไปต่อได้ไหม"
+
+## รูปแบบการส่งมอบ
+เขียนรายงานเป็นไฟล์เมื่อทำได้ (เช่น `docs/traceability-report.md`) ถ้าเขียนไฟล์ไม่ได้ (เช่น รันเป็น subagent ที่ถูกจำกัดสิทธิ์)
+ให้ส่งรายงานเต็มกลับเป็นข้อความแทน อย่าพยายามหลบข้อจำกัด
 
 ## ข้อควรระวัง
 - Skill นี้ตรวจความสอดคล้อง ไม่ได้ออกแบบใหม่ ถ้าพบว่า design ผิดหลัก ให้ส่งต่อ architect ที่เกี่ยวข้อง
