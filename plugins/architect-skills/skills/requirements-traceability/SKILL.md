@@ -43,7 +43,11 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 - Code: function / module ที่ implement
 - Test: test case ที่ assert AC นั้นจริง (ไม่ใช่แค่ชื่อ test ที่ฟังดูเกี่ยวข้อง ให้เปิดดู assertion)
 
-สถานะต่อ link: `COVERED` | `PARTIAL` | `MISSING` | `UNVERIFIABLE`
+สถานะต่อ link: `COVERED` | `PARTIAL` | `FAILING` | `MISSING` | `UNVERIFIABLE`
+- `FAILING`: implement และมี test แล้ว แต่ test ล้มเหลวจริง (พบ defect) ให้ระบุ test และ bug ที่เกี่ยวข้อง
+  อย่านับเป็น COVERED และให้ตรวจขอบเขตของ bug เองด้วย เพราะรายงานทดสอบมักระบุแค่ input ตัวอย่างตัวเดียว (probe input ใกล้เคียงเพิ่ม)
+- ชั้น design ที่ไม่มี (เช่น งานเล็กที่ข้าม architect/uiux) ให้ใช้ task list เป็น proxy ในคอลัมน์ Design และบอกไว้ชัด
+  พร้อมบันทึก finding `MISSING LAYER` ระดับ LOW ถ้าเป็น PoC ที่ไม่ deploy
 - `PARTIAL`: มี happy path แต่ไม่มี error/boundary ที่ AC ระบุ
 - ระบุ **ระดับหลักฐาน** ของทุก `COVERED` เพราะการเปิดอ่าน assertion ทุก test ไม่คุ้มเมื่อมี AC หลักสิบ-ร้อยข้อ:
   - `L1` ชื่อ test/ฟังก์ชันตรง AC เท่านั้น → นับเป็น `COVERED (provisional)`
@@ -52,6 +56,9 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
   ห้ามนับ L0 (แค่ชื่อไฟล์ที่ฟังดูเกี่ยวข้อง) เป็น COVERED ข้อที่เสี่ยงสูง (P0/เงิน/auth) ต้องไปถึง L2 ขึ้นไป
 - รัน test ได้เฉพาะคำสั่ง read-only ที่ไม่มี side effect (ไม่แตะ DB จริง/ไม่ deploy) ถ้ารันไม่ได้ให้ระบุว่าผลทั้งหมดไม่เกิน L2
 - หน่วยนับคือ AC หนึ่งข้อ (แยกข้อที่มีหลายส่วนเป็นข้อย่อย) และ `UNVERIFIABLE` นับอยู่ในตัวหาร
+  coverage % = จำนวน `COVERED` ÷ AC ทั้งหมด โดย PARTIAL/FAILING/MISSING/UNVERIFIABLE นับเป็น 0 ทั้งหมด
+  และแยกบอกจำนวน provisional (L1) ออกจากที่ verified (L3) ไม่ผสมกันเป็นเลขเดียว
+- ถ้า test แค่ตรวจว่ามีอยู่ (เช่น `callable()`) ให้ถือเป็น L1 ไม่ใช่ L2 เว้นแต่มี test อื่นที่เรียกใช้พฤติกรรมนั้นจริง
 
 ### Step 4 — Trace Backward (ของที่ไม่มีที่มา)
 เริ่มจาก endpoint, column, feature flag, module, test แล้วถามว่า "ตอบ requirement ข้อไหน"
@@ -79,6 +86,8 @@ requirement ที่ถูกลืมเงียบๆ, API spec ที่ไ
 ### Step 6 — Risk-Rank & Gap Triage
 - ให้ severity ตามผลกระทบ ไม่ใช่ตามจำนวน: `CRITICAL` (เงิน/auth/data loss/ข้อกำหนดทางกฎหมาย ไม่มี test หรือไม่ถูก implement)
   > `HIGH` (functional หลักขาด) > `MEDIUM` (edge case/NFR) > `LOW` (เอกสารไม่ตรงแต่พฤติกรรมถูก)
+- priority ใช้ของ requirement ก่อน ถ้า requirement ไม่ระบุให้ใช้ของ task ที่รับผิดชอบ และบอกว่ามาจากไหน
+- งานที่เป็น PoC/ไม่ deploy และไม่แตะเงิน/auth/PII: ไม่ต้องมี CRITICAL แต่การละเมิด AC ระดับ P0 ยังเป็น HIGH
 - story ที่เป็น P0 แต่ทำงานตามจุดประสงค์ไม่ได้เลย (เช่น มี client แต่ไม่มีตัวส่ง) ให้ไม่ต่ำกว่า `HIGH`
   แม้ไม่เข้าเกณฑ์ CRITICAL และ priority ของ requirement (P0/P1/P2) ให้ใช้ปรับ severity ขึ้น/ลงหนึ่งขั้นได้
 - เรียงผลโดย CRITICAL ก่อนเสมอ เพราะผู้อ่านมักหยุดอ่านกลางทาง
